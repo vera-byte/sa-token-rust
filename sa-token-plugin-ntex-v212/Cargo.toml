@@ -8,7 +8,7 @@ repository.workspace = true
 description = "Ntex 2.12.x bindings for sa-token-rust"
 
 [dependencies]
-sa-token-plugin-ntex-core = { path = "../sa-token-plugin-ntex-core" }
+sa-token-plugin-ntex-core = { version = "0.1.14", path = "../sa-token-plugin-ntex-core" }
 sa-token-core = { version = "0.1.13", path = "../sa-token-core" }
 sa-token-adapter = { version = "0.1.13", path = "../sa-token-adapter" }
 sa-token-macro = { version = "0.1.13", path = "../sa-token-macro" }

@@ -8,7 +8,7 @@ repository.workspace = true
 description = "Actix-web 4.x bindings for sa-token-rust"
 
 [dependencies]
-sa-token-plugin-actix-web-core = { path = "../sa-token-plugin-actix-web-core" }
+sa-token-plugin-actix-web-core = { version = "0.1.14", path = "../sa-token-plugin-actix-web-core" }
 sa-token-core = { version = "0.1.13", path = "../sa-token-core" }
 sa-token-adapter = { version = "0.1.13", path = "../sa-token-adapter" }
 sa-token-macro = { version = "0.1.13", path = "../sa-token-macro" }

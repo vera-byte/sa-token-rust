@@ -8,7 +8,7 @@ repository.workspace = true
 description = "Rocket 0.5.x bindings for sa-token-rust"
 
 [dependencies]
-sa-token-plugin-rocket-core = { path = "../sa-token-plugin-rocket-core" }
+sa-token-plugin-rocket-core = { version = "0.1.14", path = "../sa-token-plugin-rocket-core" }
 sa-token-core = { version = "0.1.13", path = "../sa-token-core" }
 sa-token-adapter = { version = "0.1.13", path = "../sa-token-adapter" }
 sa-token-macro = { version = "0.1.13", path = "../sa-token-macro" }
