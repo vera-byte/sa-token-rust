@@ -8,14 +8,14 @@ repository.workspace = true
 description = "Gotham 0.7.x bindings for sa-token-rust"
 
 [dependencies]
-sa-token-plugin-gotham-core = { version = "0.1.14", path = "../sa-token-plugin-gotham-core" }
-sa-token-core = { version = "0.1.13", path = "../sa-token-core" }
-sa-token-adapter = { version = "0.1.13", path = "../sa-token-adapter" }
-sa-token-macro = { version = "0.1.13", path = "../sa-token-macro" }
+sa-token-plugin-gotham-core = { version = "0.1.15", path = "../sa-token-plugin-gotham-core" }
+sa-token-core = { version = "0.1.15", path = "../sa-token-core" }
+sa-token-adapter = { version = "0.1.15", path = "../sa-token-adapter" }
+sa-token-macro = { version = "0.1.15", path = "../sa-token-macro" }
 
-sa-token-storage-memory = { version = "0.1.13", path = "../sa-token-storage-memory", optional = true }
-sa-token-storage-redis = { version = "0.1.13", path = "../sa-token-storage-redis", optional = true }
-sa-token-storage-database = { version = "0.1.13", path = "../sa-token-storage-database", optional = true }
+sa-token-storage-memory = { version = "0.1.15", path = "../sa-token-storage-memory", optional = true }
+sa-token-storage-redis = { version = "0.1.15", path = "../sa-token-storage-redis", optional = true }
+sa-token-storage-database = { version = "0.1.15", path = "../sa-token-storage-database", optional = true }
 
 tokio = { workspace = true }
 async-trait = { workspace = true }
@@ -24,7 +24,7 @@ serde_json = { workspace = true }
 http = { workspace = true }
 gotham = "0.7.4"
 gotham_derive = "0.7.1"
-hyper = "1.6.0"
+hyper = "0.14"
 mime = "0.3.17"
 urlencoding = { workspace = true }
 tracing = { workspace = true }

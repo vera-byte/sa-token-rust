@@ -13,14 +13,14 @@ description = "Tide framework integration for sa-token-rust - All-in-one package
 
 [dependencies]
 # 核心依赖（重新导出给用户）
-sa-token-core = { version = "0.1.13" }
-sa-token-adapter = { version = "0.1.13" }
-sa-token-macro = { version = "0.1.13" }
+sa-token-core = { version = "0.1.15" }
+sa-token-adapter = { version = "0.1.15" }
+sa-token-macro = { version = "0.1.15" }
 
 # 存储实现（可选，通过 feature 控制）
-sa-token-storage-memory = { version = "0.1.13", optional = true }
-sa-token-storage-redis = { version = "0.1.13", optional = true }
-sa-token-storage-database = { version = "0.1.13", optional = true }
+sa-token-storage-memory = { version = "0.1.15", optional = true }
+sa-token-storage-redis = { version = "0.1.15", optional = true }
+sa-token-storage-database = { version = "0.1.15", optional = true }
 
 # Tide 框架依赖
 async-trait = { workspace = true }
@@ -30,7 +30,7 @@ http = { workspace = true }
 tide-017 = { package = "tide", version = "0.17.0-beta.1", optional = true }
 tracing = { workspace = true }
 urlencoding = { workspace = true }
-async-std = "1.13.1"
+async-std = "1.13.2"
 
 [features]
 default = ["tide-017", "memory"]

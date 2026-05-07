@@ -12,8 +12,8 @@ categories.workspace = true
 description = "A powerful Rust authentication and authorization framework"
 
 [dependencies]
-sa-token-core = { version = "0.1.13", path = "./sa-token-core" }
-sa-token-storage-memory = { version = "0.1.13", path = "./sa-token-storage-memory" }
+sa-token-core = { version = "0.1.15", path = "./sa-token-core" }
+sa-token-storage-memory = { version = "0.1.15", path = "./sa-token-storage-memory" }
 tokio = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
@@ -97,7 +97,7 @@ exclude = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.14"
+version = "0.1.15"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["金书记"]
@@ -110,42 +110,42 @@ categories = ["authentication", "web-programming"]
 
 [workspace.dependencies]
 # 核心依赖
-tokio = { version = "1.45.1", features = ["full"] }
+tokio = { version = "1.52.2", features = ["full"] }
 async-trait = "0.1"
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 anyhow = "1.0"
 
 # 序列化
-serde = { version = "1.0.219", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
 
 # Token相关
-uuid = { version = "1.17.0", features = ["v4", "serde"] }
-jsonwebtoken = "9.3.1"
+uuid = { version = "1.23.1", features = ["v4", "serde"] }
+jsonwebtoken = "10.3.0"
 
 # 加密
-sha2 = "0.11.0-rc.0"
-bcrypt = "0.17.0"
+sha2 = "0.11.0"
+bcrypt = "0.19.1"
 
 # 时间处理
-chrono = { version = "0.4.41", features = ["serde"] }
+chrono = { version = "0.4.44", features = ["serde"] }
 
 # Redis
-redis = { version = "0.32.0", features = ["tokio-comp", "connection-manager"] }
+redis = { version = "1.2.1", features = ["tokio-comp", "connection-manager"] }
 
 # 日志
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
 # HTTP（通用）
-http = "1.3.1"
-tower = "0.5.2"
+http = "1.4.0"
+tower = "0.5.3"
 
 # URL
 urlencoding = "2.1.3"
 
 # 正则表达式
-regex = "1.11.1"
+regex = "1.12.3"
 
 [patch.crates-io]
 sa-token-core = { path = "sa-token-core" }

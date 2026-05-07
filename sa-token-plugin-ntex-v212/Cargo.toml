@@ -8,20 +8,20 @@ repository.workspace = true
 description = "Ntex 2.12.x bindings for sa-token-rust"
 
 [dependencies]
-sa-token-plugin-ntex-core = { version = "0.1.14", path = "../sa-token-plugin-ntex-core" }
-sa-token-core = { version = "0.1.13", path = "../sa-token-core" }
-sa-token-adapter = { version = "0.1.13", path = "../sa-token-adapter" }
-sa-token-macro = { version = "0.1.13", path = "../sa-token-macro" }
+sa-token-plugin-ntex-core = { version = "0.1.15", path = "../sa-token-plugin-ntex-core" }
+sa-token-core = { version = "0.1.15", path = "../sa-token-core" }
+sa-token-adapter = { version = "0.1.15", path = "../sa-token-adapter" }
+sa-token-macro = { version = "0.1.15", path = "../sa-token-macro" }
 
-sa-token-storage-memory = { version = "0.1.13", path = "../sa-token-storage-memory", optional = true }
-sa-token-storage-redis = { version = "0.1.13", path = "../sa-token-storage-redis", optional = true }
-sa-token-storage-database = { version = "0.1.13", path = "../sa-token-storage-database", optional = true }
+sa-token-storage-memory = { version = "0.1.15", path = "../sa-token-storage-memory", optional = true }
+sa-token-storage-redis = { version = "0.1.15", path = "../sa-token-storage-redis", optional = true }
+sa-token-storage-database = { version = "0.1.15", path = "../sa-token-storage-database", optional = true }
 
 async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 http = { workspace = true }
-ntex = "2.12.4"
+ntex = "2.18.0"
 urlencoding = { workspace = true }
 tracing = { workspace = true }
 
