@@ -69,7 +69,7 @@ sa-token-plugin-rocket = "0.1.14"
 sa-token-plugin-salvo = "0.1.14"
 ```
 
-Full framework matrix: [README.md](../../README.md#-quick-start) in the repository root.
+Full framework matrix: [README.md](https://github.com/sa-tokens/sa-token-rust#-quick-start) in the repository root.
 
 ---
 

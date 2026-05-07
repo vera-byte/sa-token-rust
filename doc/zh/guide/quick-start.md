@@ -69,7 +69,7 @@ sa-token-plugin-rocket = "0.1.14"
 sa-token-plugin-salvo = "0.1.14"
 ```
 
-完整对照表见仓库根目录 [README.md](../../../README.md#-快速开始)。
+完整对照表见仓库根目录 [README.md](https://github.com/sa-tokens/sa-token-rust/blob/main/README_zh-CN.md#-快速开始)。
 
 ---
 

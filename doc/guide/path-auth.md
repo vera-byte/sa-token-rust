@@ -127,7 +127,7 @@ let config = PathAuthConfig::new()
 
 ## Framework Integration
 
-Built-in **`with_path_auth`** examples follow for Actix-web, Axum, Poem, Salvo, Ntex, and Tide. Rocket, Gotham, and Warp provide global auth layers first — combine **`PathAuthConfig`** in handlers or macros when you need path rules ([full guide](../../../docs/PATH_AUTH_GUIDE.md)).
+Built-in **`with_path_auth`** examples follow for Actix-web, Axum, Poem, Salvo, Ntex, and Tide. Rocket, Gotham, and Warp provide global auth layers first — combine **`PathAuthConfig`** in handlers or macros when you need path rules ([full guide](https://github.com/sa-tokens/sa-token-rust/blob/main/docs/PATH_AUTH_GUIDE.md)).
 
 ### Actix-web
 

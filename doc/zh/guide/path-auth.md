@@ -127,7 +127,7 @@ let config = PathAuthConfig::new()
 
 ## 框架集成
 
-下文含 Actix-web、Axum、Poem、Salvo、Ntex、Tide 的 **`with_path_auth`** 示例。**Rocket / Gotham / Warp** 以全局层为主，路径规则请在处理器或宏中组合 **`PathAuthConfig`**（完整说明见 [docs 路径鉴权指南](../../../docs/PATH_AUTH_GUIDE_zh-CN.md)）。
+下文含 Actix-web、Axum、Poem、Salvo、Ntex、Tide 的 **`with_path_auth`** 示例。**Rocket / Gotham / Warp** 以全局层为主，路径规则请在处理器或宏中组合 **`PathAuthConfig`**（完整说明见 [文档](https://github.com/sa-tokens/sa-token-rust/blob/main/docs/PATH_AUTH_GUIDE_zh-CN.md)）。
 
 ### Actix-web
 
