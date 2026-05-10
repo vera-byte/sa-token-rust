@@ -255,6 +255,32 @@ let login_id = StpUtil::get_login_id_as_string().await?;
 let user_id = StpUtil::get_login_id_as_long().await?;
 ```
 
+### 理解 SaTokenContext
+
+上下文方法依赖 `SaTokenContext` — 由框架中间件设置的请求作用域值：
+
+```rust
+use sa_token_core::SaTokenContext;
+
+// 在 future 生命周期内绑定上下文（跨 await/线程安全）
+let ctx = SaTokenContext { token: Some(my_token), login_id: Some("user_1".into()), ..Default::default() };
+let result = SaTokenContext::scope(ctx, async {
+    // 此作用域内所有 StpUtil::*_current() 方法可用
+    StpUtil::get_login_id_as_string().await
+}).await?;
+
+// 尝试读取当前上下文（优先 task-local，回退 thread-local）
+if let Some(ctx) = SaTokenContext::try_current() {
+    println!("Token: {:?}", ctx.token);
+}
+
+// Thread-local 路径（同步代码用）
+SaTokenContext::set_current(ctx);
+SaTokenContext::clear();
+```
+
+**生命周期：** 框架中间件（如 `SaTokenLayer`）调用 `run_auth_flow` 内部管理上下文绑定。除非实现自定义中间件，通常无需直接调用。
+
 ## Session 管理
 
 ### 获取 Session

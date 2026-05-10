@@ -36,9 +36,37 @@ SSO 服务端是中央认证服务，负责：
 - 创建本地会话
 - 处理登出回调
 
-#### 3. SsoTicket - 认证票据
+#### 3. SsoManager - 统一管理器
 
-票据是一个短期、一次性使用的认证令牌，包含：
+`SsoManager` 将 `SsoServer` 和 `SsoClient` 封装为统一的构建器接口：
+
+```rust
+use sa_token_core::{SsoManager, SsoConfig};
+
+let sso = SsoManager::builder()
+    .server("https://sso.example.com/auth")
+    .client("https://app1.example.com")
+    .ticket_timeout(300)
+    .build();
+
+// 访问服务端方法
+let ticket = sso.server.login("user_123", "https://app1.example.com").await?;
+
+// 访问客户端方法
+let login_url = sso.client.get_login_url();
+```
+
+#### 4. SsoConfig - 配置
+
+| 字段 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `server_url` | `String` | — | SSO 认证服务地址 |
+| `service_url` | `String` | — | 当前服务（客户端）地址 |
+| `ticket_timeout` | `i64` | `300` | 票据有效期（秒） |
+| `allowed_origins` | `Vec<String>` | `[]` | 跨域允许的来源列表 |
+
+#### 5. SsoTicket - 认证票据
+
 - `ticket_id`：唯一票据标识符（UUID）
 - `service`：目标应用 URL
 - `login_id`：用户标识

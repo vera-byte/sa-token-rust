@@ -27,6 +27,72 @@
 
 ---
 
+
+## 项目结构
+
+```
+sa-token-rust/
+├── sa-token-core/                     # 核心库（Token、Session、Manager、Router）
+├── sa-token-adapter/                  # 适配器接口（Storage、Request/Response）
+├── sa-token-macro/                    # 过程宏（#[sa_check_login] 等）
+├── sa-token-storage-memory/           # 内存存储
+├── sa-token-storage-redis/            # Redis 存储（+ 构建器）
+├── sa-token-storage-database/         # 数据库存储（占位）
+├── sa-token-plugin-actix-web/         # Actix-web 门面（默认 v4）
+├── sa-token-plugin-axum/              # Axum 集成（v8）
+├── sa-token-plugin-gotham/            # Gotham 门面（默认 v074）
+├── sa-token-plugin-ntex/              # Ntex 门面（默认 v212）
+├── sa-token-plugin-poem/              # Poem 集成
+├── sa-token-plugin-rocket/            # Rocket 门面（默认 v05）
+├── sa-token-plugin-salvo/             # Salvo 门面（默认 v079）
+├── sa-token-plugin-tide/              # Tide 集成
+├── sa-token-plugin-warp/              # Warp 集成
+└── examples/                          # 示例项目
+```
+
+> **版本分离**：门面 crate 通过 Cargo features 在编译时选择框架大版本（`v4`/`v5`、`v05`、`v079` 等）。
+
+## 解决的问题
+
+### 1. 框架集成复杂性
+9 个 Web 框架，一套统一 API。每个插件提供相同的中间件 + 提取器 + Token 提取模式。
+
+### 2. 减少样板代码
+声明式宏消除手动认证检查：
+```rust
+#[sa_check_permission("user:delete")]
+async fn delete_user() { /* 自动检查 */ }
+```
+
+### 3. Session 和 Token 管理
+```rust
+let token = StpUtil::login("user_10001").await?;
+StpUtil::set_roles("user_10001", vec!["admin".into()]).await?;
+StpUtil::logout(&token).await?;
+```
+
+### 4. 权限和角色系统
+内置通配符匹配（`user:*` 匹配 `user:list`、`user:delete`），支持 AND/OR 逻辑。
+
+### 5. 分布式和 SSO
+跨服务 Session 共享 + 基于票据的单点登录，适配微服务架构。
+
+### 6. WebSocket 认证
+专用 `WsAuthManager`，从 header/query/cookie 认证 WebSocket 连接。
+
+### 7. 安全特性
+Nonce 防重放、Refresh Token 刷新、JWT 签名（8 种算法）。
+
+### 8. 事件系统
+```rust
+impl SaTokenListener for MyListener {
+    async fn on_login(&self, login_id: &str, token: &str, login_type: &str) {
+        // 记录日志、发送通知、审计
+    }
+}
+StpUtil::register_listener(Arc::new(MyListener));
+```
+
 ## 🚀 快速入门
 
 只需添加一个依赖即可开始：
@@ -111,22 +177,24 @@ StpUtil::logout(&token).await?;
 
 ➡️ **[StpUtil API 参考 →](/zh/guide/stp-util.md)**
 
-### 权限匹配
+### 过程宏
 
-支持 `*` 和 `?` 通配符的权限匹配：
+8 个声明式认证宏 — `#[sa_check_login]`、`#[sa_check_permission]`、`#[sa_check_role]`、AND/OR 变体、`#[sa_ignore]`：
 
 ```rust
-// 精确匹配
-StpUtil::check_permission("user_10001", "user:delete").await?;
+use sa_token_macro::*;
 
-// 通配符：匹配 user:delete, user:list, user:add 等
-StpUtil::check_permission("user_10001", "user:*").await?;
+#[sa_check_login]
+async fn protected_route() -> &'static str { "此路由需要登录" }
 
-// 嵌套通配符
-StpUtil::check_permission("user_10001", "admin:*:*").await?;
+#[sa_check_permission("user:delete")]
+async fn delete_user(user_id: String) -> &'static str { "用户已删除" }
+
+#[sa_check_role("admin")]
+async fn admin_only() -> &'static str { "仅管理员可见" }
 ```
 
-➡️ **[权限匹配规则 →](/zh/guide/permission-matching.md)**
+➡️ **[过程宏 →](/zh/guide/permission-matching)**
 
 ### 过程宏
 
@@ -171,8 +239,7 @@ impl SaTokenListener for MyListener {
 StpUtil::register_listener(Arc::new(MyListener)).await;
 ```
 
-➡️ **[事件监听指南 →](/zh/guide/event-listener.md)**
-➡️ **[事件监听快速入门 →](/zh/guide/event-listener-quickstart.md)**
+➡️ **[事件监听指南 →](/zh/guide/event-listener)**
 
 ### 路径鉴权
 
@@ -310,10 +377,6 @@ impl SaStorage for CustomStorage {
 
 ### 项目介绍
 
-sa-token-rust 项目详细介绍和设计理念：
-
-➡️ **[项目介绍 →](/zh/guide/project-intro.md)**
-
 ---
 
 ## 支持的语言
@@ -344,4 +407,4 @@ sa-token-rust 项目详细介绍和设计理念：
 
 ---
 
-**由 sa-token 社区用 ❤️ 制作**
+**由 sa-tokens 社区用 ❤️ 制作**

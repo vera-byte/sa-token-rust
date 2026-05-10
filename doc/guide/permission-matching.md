@@ -1,322 +1,259 @@
-# Permission Matching Rules
+# Proc Macros
 
-## English
+[中文文档](/zh/guide/permission-matching) | English
 
-### Overview
+sa-token-rust provides 8 procedural macros for declarative authentication and authorization. All macros work at **compile time**, inserting the appropriate check logic into the function body before compilation.
 
-The `#[sa_check_permission]` macro in sa-token-rust provides a flexible permission checking system that supports both exact matching and wildcard patterns. This document explains how the permission matching algorithm works.
+## Table of Contents
 
-### Basic Concepts
+- [Overview](#overview)
+- [Constraints](#constraints)
+- [Macro Reference](#macro-reference)
+- [Permission Matching Rules](#permission-matching-rules)
+- [Role Matching Rules](#role-matching-rules)
+- [Best Practices](#best-practices)
 
-#### Permission Format
+## Overview
 
-Permissions follow the format: `module:action`
+| Macro | Purpose |
+|---|---|
+| `#[sa_check_login]` | Require user to be logged in |
+| `#[sa_check_permission("p")]` | Require a specific permission |
+| `#[sa_check_permissions_and("a","b")]` | Require ALL specified permissions |
+| `#[sa_check_permissions_or("a","b")]` | Require ANY specified permission |
+| `#[sa_check_role("r")]` | Require a specific role |
+| `#[sa_check_roles_and("a","b")]` | Require ALL specified roles |
+| `#[sa_check_roles_or("a","b")]` | Require ANY specified role |
+| `#[sa_ignore]` | Skip all authentication checks |
 
-Examples:
-- `user:list` - View user list
-- `user:create` - Create user
-- `user:update` - Update user
-- `user:delete` - Delete user
-- `order:refund` - Refund order
+## Constraints
 
-### Matching Rules
+All `#[sa_check_*]` macros share the same requirements:
 
-#### 1. Exact Match
+1. **Function must be `async fn`** — compile-time error if not
+2. **Return type must be `Result<T, E>` where `E: From<SaTokenError>`** — the `?` operator propagates auth errors
+3. **Must use framework middleware** — `SaTokenLayer` (or equivalent) must be registered to inject the login context into the request, otherwise macros cannot read `login_id`
 
-The system first attempts an exact string match.
+`#[sa_ignore]` can be applied to functions, structs, or impl blocks without the async requirement.
 
-```rust
-// User has permission
-["user:delete"]
+## Macro Reference
 
-// Required permission
-"user:delete"
+### `#[sa_check_login]`
 
-// Result: ✅ Match (exact)
-```
-
-**Match Table:**
-
-| User Permission | Required Permission | Result |
-|-----------------|---------------------|--------|
-| `user:delete`   | `user:delete`       | ✅ Match |
-| `user:create`   | `user:delete`       | ❌ No match |
-| `order:list`    | `user:delete`       | ❌ No match |
-
-#### 2. Wildcard Match (`*`)
-
-If exact match fails, the system checks for wildcard patterns.
-
-**Module Wildcard:** `module:*`
-- Matches all actions in the specified module
-- Format: `{prefix}:*`
-- Example: `user:*` matches `user:list`, `user:create`, `user:delete`, etc.
+Checks that the current request has a valid login context.
 
 ```rust
-// User has permission
-["user:*"]
+use sa_token_macro::sa_check_login;
 
-// Required permissions (all match)
-"user:list"    // ✅
-"user:create"  // ✅
-"user:update"  // ✅
-"user:delete"  // ✅
-
-// No match
-"order:list"   // ❌ (different module)
-```
-
-**Match Table:**
-
-| User Permission | Required Permission | Result |
-|-----------------|---------------------|--------|
-| `user:*`        | `user:delete`       | ✅ Wildcard match |
-| `user:*`        | `user:list`         | ✅ Wildcard match |
-| `user:*`        | `user:create`       | ✅ Wildcard match |
-| `admin:*`       | `user:delete`       | ❌ No match (different prefix) |
-| `order:*`       | `user:list`         | ❌ No match (different prefix) |
-
-#### 3. Global Wildcard (`*`)
-
-A single `*` grants all permissions.
-
-```rust
-// User has permission
-["*"]
-
-// All permissions match
-"user:delete"   // ✅
-"order:create"  // ✅
-"admin:config"  // ✅
-```
-
-**Match Table:**
-
-| User Permission | Required Permission | Result |
-|-----------------|---------------------|--------|
-| `*`             | `user:delete`       | ✅ Global wildcard |
-| `*`             | `order:list`        | ✅ Global wildcard |
-| `*`             | `admin:config`      | ✅ Global wildcard |
-
-### Algorithm Flow
-
-```mermaid
-graph TD
-    A[Start: Check Permission] --> B[Get user's permission list]
-    B --> C{Step 1: Exact Match<br/>Does list contain<br/>exact permission?}
-    C -->|Yes| D[✅ PASS]
-    C -->|No| E{Step 2: Wildcard Match<br/>Check each permission<br/>Ends with ':*'?<br/>Required starts with prefix?}
-    E -->|Yes| F[✅ PASS]
-    E -->|No| G[❌ DENY]
-    
-    style D fill:#90EE90,stroke:#333,stroke-width:2px
-    style F fill:#90EE90,stroke:#333,stroke-width:2px
-    style G fill:#FFB6C6,stroke:#333,stroke-width:2px
-    style C fill:#87CEEB,stroke:#333,stroke-width:2px
-    style E fill:#87CEEB,stroke:#333,stroke-width:2px
-```
-
-### Implementation
-
-The matching logic is implemented in `sa-token-core/src/util.rs`:
-
-```rust
-pub async fn has_permission(login_id: impl LoginId, permission: &str) -> bool {
-    let manager = Self::get_manager();
-    let map = manager.user_permissions.read().await;
-    
-    if let Some(permissions) = map.get(&login_id.to_login_id()) {
-        // 1. Exact match
-        if permissions.contains(&permission.to_string()) {
-            return true;
-        }
-        
-        // 2. Wildcard match
-        for perm in permissions {
-            if perm.ends_with(":*") {
-                let prefix = &perm[..perm.len() - 2];
-                if permission.starts_with(prefix) {
-                    return true;
-                }
-            }
-        }
-    }
-    
-    false
+#[sa_check_login]
+async fn user_profile() -> Result<impl Responder, StatusCode> {
+    // login_id is guaranteed to be available via StpUtil::get_login_id_as_string()
+    Ok("Profile page")
 }
 ```
 
-### Usage Examples
-
-#### Example 1: Exact Permission
-
+**Expands to:**
 ```rust
-use sa_token_core::StpUtil;
-use sa_token_macro::sa_check_permission;
-
-// Initialize permissions
-StpUtil::set_permissions("user_123", vec![
-    "user:list".to_string(),
-    "user:create".to_string(),
-]).await?;
-
-// Check exact permission
-#[sa_check_permission("user:list")]
-async fn list_users() -> &'static str {
-    let login_id = StpUtil::get_login_id_as_string()?;
-    
-    // Manual check (recommended)
-    if !StpUtil::has_permission(&login_id, "user:list").await {
-        return "Permission denied";
-    }
-    
-    "User list"
+async fn user_profile() -> Result<impl Responder, StatusCode> {
+    sa_token_core::StpUtil::check_login_current()?;
+    Ok("Profile page")
 }
 ```
-
-#### Example 2: Wildcard Permission
-
-```rust
-// Admin has all user module permissions
-StpUtil::set_permissions("admin_001", vec![
-    "user:*".to_string(),    // All user operations
-    "order:*".to_string(),   // All order operations
-]).await?;
-
-// These all pass for admin_001
-#[sa_check_permission("user:list")]
-async fn list_users() { /* ... */ }
-
-#[sa_check_permission("user:create")]
-async fn create_user() { /* ... */ }
-
-#[sa_check_permission("user:delete")]
-async fn delete_user() { /* ... */ }
-```
-
-#### Example 3: Multiple Permissions
-
-```rust
-// Check multiple permissions (AND logic)
-if StpUtil::has_permissions_and(&login_id, &["user:read", "user:write"]).await {
-    println!("Has both read and write permissions");
-}
-
-// Check multiple permissions (OR logic)
-if StpUtil::has_permissions_or(&login_id, &["admin:*", "user:*"]).await {
-    println!("Has admin or user module permissions");
-}
-```
-
-#### Example 4: Dynamic Permission
-
-```rust
-#[sa_check_permission("order:refund")]
-async fn refund_order(order_id: u64, amount: f64) -> Result<String, StatusCode> {
-    let login_id = StpUtil::get_login_id_as_string()?;
-    
-    // Dynamic permission based on business logic
-    let required_permission = if amount > 1000.0 {
-        "order:refund:advanced"  // High-value refunds need advanced permission
-    } else {
-        "order:refund"
-    };
-    
-    if !StpUtil::has_permission(&login_id, required_permission).await {
-        return Err(StatusCode::FORBIDDEN);
-    }
-    
-    Ok(format!("Refunded ${}", amount))
-}
-```
-
-### Best Practices
-
-#### 1. Permission Naming Convention
-
-Follow the `module:action` format:
-
-```
-✅ Good:
-- user:list
-- user:create
-- user:update
-- user:delete
-- order:create
-- order:refund
-- admin:config
-
-❌ Bad:
-- userList (no separator)
-- user_create (wrong separator)
-- deleteUser (action first)
-```
-
-#### 2. Wildcard Usage
-
-Use wildcards sparingly for administrative roles:
-
-```rust
-// Regular user - specific permissions
-StpUtil::set_permissions("user_123", vec![
-    "user:list".to_string(),
-    "user:view".to_string(),
-]).await?;
-
-// Admin - module wildcard
-StpUtil::set_permissions("admin_001", vec![
-    "user:*".to_string(),
-    "order:*".to_string(),
-]).await?;
-
-// Super admin - global wildcard (use with caution)
-StpUtil::set_permissions("superadmin_001", vec![
-    "*".to_string(),
-]).await?;
-```
-
-#### 3. Hierarchical Permissions
-
-Organize permissions hierarchically:
-
-```rust
-// Level 1: Module
-"user:*"      // All user operations
-
-// Level 2: Action
-"user:list"
-"user:create"
-"user:update"
-"user:delete"
-
-// Level 3: Resource-specific (custom implementation)
-"user:update:self"     // Only update own profile
-"user:update:any"      // Update any user
-```
-
-### Performance Considerations
-
-- **Exact Match First:** The system checks exact matches before wildcards, optimizing for the most common case.
-- **In-Memory Storage:** Permissions are stored in memory (`HashMap`) for fast access.
-- **Async Operations:** All permission checks are async to support Redis or database backends.
-
-### Security Notes
-
-⚠️ **Important:**
-1. **Manual Checks Required:** The `#[sa_check_permission]` macro only adds metadata. You must manually call `StpUtil::has_permission()` in your function.
-2. **Validate Before Use:** Always check permissions before performing sensitive operations.
-3. **Limit Wildcards:** Use global wildcards (`*`) only for super admin accounts.
-4. **Audit Trails:** Consider logging permission checks for security auditing.
 
 ---
 
-## Related Documentation
+### `#[sa_check_permission("permission")]`
 
-- [StpUtil API](/guide/stp-util.md) - Complete StpUtil API reference
-- [README](https://github.com/sa-tokens/sa-token-rust) - Project overview and quick start
+Checks the user has the exact permission. Supports wildcards (see [Permission Matching](#permission-matching-rules)).
 
-## 相关文档
+```rust
+use sa_token_macro::sa_check_permission;
 
-- [StpUtil API](/zh/guide/stp-util.md) - 完整的 StpUtil API 参考
-- [首页](/zh/) - 项目概述和快速开始
+#[sa_check_permission("user:delete")]
+async fn delete_user() -> Result<impl Responder, StatusCode> {
+    Ok("User deleted")
+}
 
+#[sa_check_permission("admin:*")]
+async fn admin_dashboard() -> Result<impl Responder, StatusCode> {
+    Ok("Admin dashboard")
+}
+```
+
+**Expands to:**
+```rust
+async fn delete_user() -> Result<impl Responder, StatusCode> {
+    let __login_id = sa_token_core::StpUtil::get_login_id_as_string().await?;
+    sa_token_core::StpUtil::check_permission(&__login_id, "user:delete").await?;
+    Ok("User deleted")
+}
+```
+
+---
+
+### `#[sa_check_permissions_and("a", "b", ...)]`
+
+User must have ALL specified permissions.
+
+```rust
+#[sa_check_permissions_and("user:read", "user:write")]
+async fn manage_users() -> Result<impl Responder, StatusCode> {
+    Ok("User management")
+}
+```
+
+**Expands to a single `has_permissions_and` + returns `PermissionDeniedDetail` on failure.**
+
+---
+
+### `#[sa_check_permissions_or("a", "b", ...)]`
+
+User must have AT LEAST ONE specified permission.
+
+```rust
+#[sa_check_permissions_or("admin:panel", "super:admin")]
+async fn admin_or_super() -> Result<impl Responder, StatusCode> {
+    Ok("Admin panel")
+}
+```
+
+**Expands to a single `has_permissions_or` + returns `PermissionDeniedDetail` on failure.**
+
+---
+
+### `#[sa_check_role("role")]`
+
+Checks the user has the exact role.
+
+```rust
+use sa_token_macro::sa_check_role;
+
+#[sa_check_role("admin")]
+async fn admin_panel() -> Result<impl Responder, StatusCode> {
+    Ok("Admin panel")
+}
+```
+
+**Expands to:**
+```rust
+async fn admin_panel() -> Result<impl Responder, StatusCode> {
+    let __login_id = sa_token_core::StpUtil::get_login_id_as_string().await?;
+    sa_token_core::StpUtil::check_role(&__login_id, "admin").await?;
+    Ok("Admin panel")
+}
+```
+
+---
+
+### `#[sa_check_roles_and("a", "b", ...)]`
+
+User must have ALL specified roles. Each role is checked sequentially (short-circuits on first failure).
+
+```rust
+#[sa_check_roles_and("admin", "super")]
+async fn super_admin_panel() -> Result<impl Responder, StatusCode> {
+    Ok("Super admin panel")
+}
+```
+
+**Returns `RoleDenied` on first missing role.**
+
+---
+
+### `#[sa_check_roles_or("a", "b", ...)]`
+
+User must have AT LEAST ONE specified role.
+
+```rust
+#[sa_check_roles_or("admin", "moderator")]
+async fn moderate_content() -> Result<impl Responder, StatusCode> {
+    Ok("Content moderation")
+}
+```
+
+**Returns `RoleDenied` if none of the roles match.**
+
+---
+
+### `#[sa_ignore]`
+
+Skips ALL sa-token authentication checks. Has the highest priority — overrides any other `#[sa_check_*]` macros on the same item.
+
+**Can be applied to:**
+- Functions: skip auth for a single route handler
+- Structs: skip auth for all methods in a controller
+- impl blocks: skip auth for all methods in the impl block
+
+```rust
+use sa_token_macro::sa_ignore;
+
+// Skip auth for a public endpoint
+#[sa_ignore]
+async fn health_check() -> &'static str {
+    "OK"
+}
+
+// Skip auth for an entire controller
+#[sa_ignore]
+struct PublicController;
+
+impl PublicController {
+    async fn home() -> &'static str { "Home" }
+    async fn about() -> &'static str { "About" }
+}
+```
+
+---
+
+## Permission Matching Rules
+
+Permissions use `module:action` format with two-level wildcard support.
+
+### Matching Algorithm
+
+1. **Exact match** — `user:delete` matches `user:delete`
+2. **Prefix wildcard** — permission ending in `:*` matches all children of that prefix
+3. **Global wildcard** — `*` matches everything
+
+### Wildcard Examples
+
+| User has | Required | Result |
+|---|---|---|
+| `user:*` | `user:delete` | ✅ matches |
+| `user:*` | `user:list` | ✅ matches |
+| `user:*` | `admin:list` | ❌ different prefix |
+| `admin:*` | `user:delete` | ❌ different prefix |
+| `*` | `anything:here` | ✅ global |
+
+### Implementation Detail
+
+The wildcard match checks if a permission ends with `:*` and then verifies the required permission starts with that prefix (excluding the `*`). For example, `user:*` → prefix is `user:`. Required `user:delete` starts with `user:` → match.
+
+**Important:** Only trailing `:*` is supported. Patterns like `admin:*:*` are NOT supported — use `admin:*` instead, which already matches `admin:user:delete`.
+
+---
+
+## Role Matching Rules
+
+Role matching is **exact only** — no wildcards. A user's role list is compared against the required role via string equality.
+
+| User has roles | Required | Result |
+|---|---|---|
+| `["admin"]` | `admin` | ✅ matches |
+| `["user", "vip"]` | `admin` | ❌ no match |
+| `["superadmin"]` | `admin` | ❌ no match (different string) |
+
+---
+
+## Best Practices
+
+1. **Pair macros with middleware** — Always register `SaTokenLayer` (or equivalent) in your router so the request context is populated
+2. **Use `#[sa_ignore]` for public routes** — login pages, health checks, static assets
+3. **Prefer `module:action` naming** — `user:list`, `user:create`, `order:refund`
+4. **Limit global wildcards** — `*` should only be used for super-admin accounts
+5. **Handle error types** — Ensure your handler's error type implements `From<SaTokenError>`
+
+## Related
+
+- [StpUtil API](/guide/stp-util)
+- [Framework Integration](/guide/framework-integration)

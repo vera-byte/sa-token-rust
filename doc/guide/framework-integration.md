@@ -177,15 +177,174 @@ warp::serve(routes)
 
 ---
 
+## Salvo
+
+```toml
+[dependencies]
+sa-token-plugin-salvo = "0.1.14"
+salvo = "0.79"
+```
+
+```rust
+use salvo::prelude::*;
+use sa_token_plugin_salvo::{SaTokenState, SaTokenLayer, SaCheckLoginMiddleware, LoginIdExtractor};
+
+#[handler]
+async fn user_info(login_id: LoginIdExtractor) -> String {
+    format!("User: {}", login_id.login_id())
+}
+
+#[tokio::main]
+async fn main() {
+    let state = SaTokenState::builder()
+        .storage(Arc::new(MemoryStorage::new()))
+        .build();
+
+    let router = Router::new()
+        .hoop(SaTokenLayer::new(state.clone()))
+        .push(Router::with_path("/api")
+            .push(Router::with_path("/user/info").get(user_info))
+            .push(Router::with_path("/admin")
+                .hoop(SaCheckLoginMiddleware::new(state))
+                .get(admin_panel)));
+
+    Server::new(TcpListener::bind("127.0.0.1:8080"))
+        .serve(router)
+        .await;
+}
+```
+
+Salvo also provides `SaCheckPermissionMiddleware` and `SaCheckRoleMiddleware` for fine-grained authorization.
+
+---
+
+## Tide
+
+```toml
+[dependencies]
+sa-token-plugin-tide = "0.1.14"
+tide = "0.17"
+```
+
+```rust
+use tide::Request;
+use sa_token_plugin_tide::{SaTokenState, SaTokenLayer, SaCheckLoginMiddleware, LoginIdExtractor};
+
+#[tokio::main]
+async fn main() -> tide::Result<()> {
+    let state = SaTokenState::builder()
+        .storage(Arc::new(MemoryStorage::new()))
+        .build();
+
+    let mut app = tide::with_state(state.clone());
+    app.with(SaTokenLayer::new(state.clone()));
+
+    app.at("/api/user/info").get(|req: Request<SaTokenState>| async move {
+        let login_id = LoginIdExtractor::from_request(&req).unwrap();
+        Ok(format!("User: {}", login_id.login_id()))
+    });
+
+    app.at("/api/admin/*")
+        .with(SaCheckLoginMiddleware::new(state))
+        .get(admin_panel);
+
+    app.listen("127.0.0.1:8080").await?;
+    Ok(())
+}
+```
+
+---
+
+## Gotham
+
+```toml
+[dependencies]
+sa-token-plugin-gotham = "0.1.14"
+gotham = "0.7"
+```
+
+```rust
+use gotham::prelude::*;
+use sa_token_plugin_gotham::{SaTokenState, SaTokenMiddleware, SaCheckLoginMiddleware};
+
+fn router(state: SaTokenState) -> Router {
+    build_simple_router(|route| {
+        route
+            .middleware(SaTokenMiddleware::new(state.clone()))
+            .get("/user/info")
+            .to(user_info);
+
+        route
+            .middleware(SaCheckLoginMiddleware::new(state.clone()))
+            .get("/admin")
+            .to(admin_panel);
+    })
+}
+
+fn main() {
+    let state = SaTokenState::builder()
+        .storage(Arc::new(MemoryStorage::new()))
+        .build();
+
+    gotham::start("127.0.0.1:8080", router(state));
+}
+```
+
+---
+
+## Ntex
+
+```toml
+[dependencies]
+sa-token-plugin-ntex = "0.1.14"
+ntex = "2.12"
+```
+
+```rust
+use ntex::web;
+use sa_token_plugin_ntex::{SaTokenState, SaTokenLayer, SaCheckLoginMiddleware, LoginIdExtractor};
+
+#[web::get("/user/info")]
+async fn user_info(login_id: LoginIdExtractor) -> String {
+    format!("User: {}", login_id.login_id().unwrap_or("unknown"))
+}
+
+#[ntex::main]
+async fn main() -> std::io::Result<()> {
+    let state = SaTokenState::builder()
+        .storage(Arc::new(MemoryStorage::new()))
+        .build();
+
+    web::HttpServer::new(move || {
+        web::App::new()
+            .wrap(SaTokenLayer::new(state.clone()))
+            .service(user_info)
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
+}
+```
+
+---
+
 ## Common Patterns
 
 ### Middleware Types
 
-All plugins support two middleware levels:
+Each plugin provides a basic middleware/layer and optional check middleware:
 
-1. **Basic Middleware** (Axum: `SaTokenMiddleware` / Actix: `SaTokenMiddleware` / Rocket: `SaTokenFairing`): Validates tokens and injects login ID into request context, but does NOT block unauthenticated requests. Use when you want to support both public and protected routes.
-
-2. **Login-Required Middleware** (Axum/Actix: `SaCheckLoginMiddleware` / Rocket: `SaCheckLoginFairing`): Blocks requests without valid tokens. Use for fully protected route groups.
+| Framework | Basic (validate+inject, no block) | Login-Required (401 on missing) | Permission (403) | Role (403) |
+|---|---|---|---|---|
+| **Axum** | `SaTokenLayer` | `SaCheckLoginLayer` | `SaCheckPermissionLayer` | — |
+| **Actix-web** | `SaTokenLayer` | `SaCheckLoginMiddleware` | — | — |
+| **Poem** | `SaTokenMiddleware` | `SaCheckLoginMiddleware` | — | — |
+| **Rocket** | `SaTokenFairing` | `SaCheckLoginFairing` | `SaCheckPermissionFairing` | `SaCheckRoleFairing` |
+| **Salvo** | `SaTokenLayer` | `SaCheckLoginMiddleware` | `SaCheckPermissionMiddleware` | `SaCheckRoleMiddleware` |
+| **Warp** | `sa_token_filter` | `sa_check_login_filter` | — | — |
+| **Tide** | `SaTokenLayer` | `SaCheckLoginMiddleware` | `SaCheckPermissionMiddleware` | `SaCheckRoleMiddleware` |
+| **Gotham** | `SaTokenMiddleware` | `SaCheckLoginMiddleware` | `SaCheckPermissionMiddleware` | `SaCheckRoleMiddleware` |
+| **Ntex** | `SaTokenLayer` | `SaCheckLoginMiddleware` | `SaCheckPermissionMiddleware` | `SaCheckRoleMiddleware` |
 
 ### Extractors
 
