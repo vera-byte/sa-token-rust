@@ -253,6 +253,32 @@ let login_id = StpUtil::get_login_id_as_string().await?;
 let user_id = StpUtil::get_login_id_as_long().await?;
 ```
 
+### Understanding SaTokenContext
+
+The context-aware methods rely on `SaTokenContext` — a request-scoped value set by framework middleware:
+
+```rust
+use sa_token_core::SaTokenContext;
+
+// Scope a context for the duration of a future (await-safe across threads)
+let ctx = SaTokenContext { token: Some(my_token), login_id: Some("user_1".into()), ..Default::default() };
+let result = SaTokenContext::scope(ctx, async {
+    // All StpUtil::*_current() methods work inside this scope
+    StpUtil::get_login_id_as_string().await
+}).await?;
+
+// Try to read the current context (task-local first, thread-local fallback)
+if let Some(ctx) = SaTokenContext::try_current() {
+    println!("Token: {:?}", ctx.token);
+}
+
+// Thread-local path (synchronous, for non-async code)
+SaTokenContext::set_current(ctx);
+SaTokenContext::clear();
+```
+
+**Lifecycle:** Framework middleware (e.g., `SaTokenLayer`) calls `run_auth_flow` which internally manages context binding. You rarely need to call these directly except when implementing custom middleware.
+
 ## Session Management
 
 ### Get Session

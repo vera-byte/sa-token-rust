@@ -27,6 +27,73 @@ A lightweight, high-performance authentication and authorization framework for R
 
 ---
 
+## Project Structure
+
+```
+sa-token-rust/
+├── sa-token-core/                     # Core (Token, Session, Manager, Router)
+├── sa-token-adapter/                  # Adapter interfaces (Storage, Request/Response)
+├── sa-token-macro/                    # Proc macros (#[sa_check_login], etc.)
+├── sa-token-storage-memory/           # Memory storage
+├── sa-token-storage-redis/            # Redis storage (+ builder)
+├── sa-token-storage-database/         # Database storage (placeholder)
+├── sa-token-plugin-actix-web/         # Actix-web facade (v4 default)
+├── sa-token-plugin-axum/              # Axum integration (v8)
+├── sa-token-plugin-gotham/            # Gotham facade (v074 default)
+├── sa-token-plugin-ntex/              # Ntex facade (v212 default)
+├── sa-token-plugin-poem/              # Poem integration
+├── sa-token-plugin-rocket/            # Rocket facade (v05 default)
+├── sa-token-plugin-salvo/             # Salvo facade (v079 default)
+├── sa-token-plugin-tide/              # Tide integration
+├── sa-token-plugin-warp/              # Warp integration
+└── examples/                          # Example projects
+```
+
+> **Version-split**: Facade crates use Cargo features to select framework major version at compile time (`v4`/`v5`, `v05`, `v079`, etc.).
+
+## Why sa-token-rust?
+
+### 1. Framework Complexity
+9 web frameworks, one unified API. Each plugin provides the same middleware + extractor + token extraction pattern.
+
+### 2. Boilerplate Reduction
+Declarative macros eliminate manual auth checks:
+```rust
+#[sa_check_permission("user:delete")]
+async fn delete_user() { /* auto-checked */ }
+```
+
+### 3. Session & Token Management
+```rust
+let token = StpUtil::login("user_10001").await?;
+StpUtil::set_roles("user_10001", vec!["admin".into()]).await?;
+StpUtil::logout(&token).await?;
+```
+
+### 4. Permission & Role System
+Built-in wildcard matching (`user:*` matches `user:list`, `user:delete`) with AND/OR logic.
+
+### 5. Distributed & SSO
+Cross-service session sharing + ticket-based single sign-on for microservices.
+
+### 6. WebSocket Auth
+Dedicated `WsAuthManager` for authenticating WebSocket connections from headers/query/cookies.
+
+### 7. Security
+Nonce replay protection, refresh tokens, JWT signing with 8 algorithms.
+
+### 8. Event System
+```rust
+impl SaTokenListener for MyListener {
+    async fn on_login(&self, login_id: &str, token: &str, login_type: &str) {
+        // Log, notify, audit
+    }
+}
+StpUtil::register_listener(Arc::new(MyListener));
+```
+
+---
+
 ## 🚀 Quick Start
 
 Add one dependency and you're ready:
@@ -111,22 +178,24 @@ StpUtil::logout(&token).await?;
 
 ➡️ **[StpUtil API Reference →](/guide/stp-util.md)**
 
-### Permission Matching
+### Proc Macros
 
-Wildcard-based permission matching with `*` and `?` patterns:
+8 declarative macros for auth — `#[sa_check_login]`, `#[sa_check_permission]`, `#[sa_check_role]`, AND/OR variants, and `#[sa_ignore]`:
 
 ```rust
-// Exact match
-StpUtil::check_permission("user_10001", "user:delete").await?;
+use sa_token_macro::*;
 
-// Wildcard: matches user:delete, user:list, user:add, etc.
-StpUtil::check_permission("user_10001", "user:*").await?;
+#[sa_check_login]
+async fn protected_route() -> &'static str { "This route requires login" }
 
-// Nested wildcard
-StpUtil::check_permission("user_10001", "admin:*:*").await?;
+#[sa_check_permission("user:delete")]
+async fn delete_user(user_id: String) -> &'static str { "User deleted" }
+
+#[sa_check_role("admin")]
+async fn admin_only() -> &'static str { "Admin only" }
 ```
 
-➡️ **[Permission Matching →](/guide/permission-matching.md)**
+➡️ **[Proc Macros →](/guide/permission-matching)**
 
 ### Procedural Macros
 
@@ -337,4 +406,4 @@ Scan the QR code to join our WeChat group:
 
 ---
 
-**Made with ❤️ by the sa-token community**
+**Made with ❤️ by the sa-tokens community**

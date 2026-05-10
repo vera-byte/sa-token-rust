@@ -1,323 +1,256 @@
-# 权限匹配规则
+# 过程宏
 
-## 中文
+中文文档 | [English](/guide/permission-matching)
 
-### 概述
+sa-token-rust 提供 8 个过程宏用于声明式认证授权。所有宏在**编译期**工作，将检查逻辑插入函数体。
 
-sa-token-rust 中的 `#[sa_check_permission]` 宏提供了一个灵活的权限检查系统，支持精确匹配和通配符模式。本文档详细说明了权限匹配算法的工作原理。
+## 目录
 
-### 基本概念
+- [概述](#概述)
+- [约束条件](#约束条件)
+- [宏参考](#宏参考)
+- [权限匹配规则](#权限匹配规则)
+- [角色匹配规则](#角色匹配规则)
+- [最佳实践](#最佳实践)
 
-#### 权限格式
+## 概述
 
-权限遵循格式：`模块:操作`
+| 宏 | 用途 |
+|---|---|
+| `#[sa_check_login]` | 要求用户已登录 |
+| `#[sa_check_permission("p")]` | 要求特定权限 |
+| `#[sa_check_permissions_and("a","b")]` | 要求拥有全部指定权限 |
+| `#[sa_check_permissions_or("a","b")]` | 要求拥有任一指定权限 |
+| `#[sa_check_role("r")]` | 要求特定角色 |
+| `#[sa_check_roles_and("a","b")]` | 要求拥有全部指定角色 |
+| `#[sa_check_roles_or("a","b")]` | 要求拥有任一指定角色 |
+| `#[sa_ignore]` | 跳过所有认证检查 |
 
-示例：
-- `user:list` - 查看用户列表
-- `user:create` - 创建用户
-- `user:update` - 更新用户
-- `user:delete` - 删除用户
-- `order:refund` - 退款
+## 约束条件
 
-### 匹配规则
+所有 `#[sa_check_*]` 宏共享以下要求：
 
-#### 1. 精确匹配
+1. **函数必须是 `async fn`** — 非 async 函数会触发编译错误
+2. **返回值必须是 `Result<T, E>` 且 `E: From<SaTokenError>`** — `?` 操作符传播认证错误
+3. **必须配合框架中间件** — 需注册 `SaTokenLayer`（或等价物）注入登录上下文，否则宏无法读取 `login_id`
 
-系统首先尝试精确字符串匹配。
+`#[sa_ignore]` 可应用于函数、结构体或 impl 块，无需 async 约束。
 
-```rust
-// 用户拥有的权限
-["user:delete"]
+## 宏参考
 
-// 需要的权限
-"user:delete"
+### `#[sa_check_login]`
 
-// 结果：✅ 匹配（精确）
-```
-
-**匹配表：**
-
-| 用户权限      | 需要的权限    | 结果 |
-|---------------|---------------|------|
-| `user:delete` | `user:delete` | ✅ 匹配 |
-| `user:create` | `user:delete` | ❌ 不匹配 |
-| `order:list`  | `user:delete` | ❌ 不匹配 |
-
-#### 2. 通配符匹配 (`*`)
-
-如果精确匹配失败，系统会检查通配符模式。
-
-**模块通配符：** `模块:*`
-- 匹配指定模块中的所有操作
-- 格式：`{前缀}:*`
-- 示例：`user:*` 匹配 `user:list`、`user:create`、`user:delete` 等
+检查当前请求是否有有效的登录上下文。
 
 ```rust
-// 用户拥有的权限
-["user:*"]
+use sa_token_macro::sa_check_login;
 
-// 需要的权限（全部匹配）
-"user:list"    // ✅
-"user:create"  // ✅
-"user:update"  // ✅
-"user:delete"  // ✅
-
-// 不匹配
-"order:list"   // ❌（不同模块）
-```
-
-**匹配表：**
-
-| 用户权限  | 需要的权限    | 结果 |
-|-----------|---------------|------|
-| `user:*`  | `user:delete` | ✅ 通配符匹配 |
-| `user:*`  | `user:list`   | ✅ 通配符匹配 |
-| `user:*`  | `user:create` | ✅ 通配符匹配 |
-| `admin:*` | `user:delete` | ❌ 不匹配（前缀不同） |
-| `order:*` | `user:list`   | ❌ 不匹配（前缀不同） |
-
-#### 3. 全局通配符 (`*`)
-
-单个 `*` 授予所有权限。
-
-```rust
-// 用户拥有的权限
-["*"]
-
-// 所有权限都匹配
-"user:delete"   // ✅
-"order:create"  // ✅
-"admin:config"  // ✅
-```
-
-**匹配表：**
-
-| 用户权限 | 需要的权限     | 结果 |
-|----------|---------------|------|
-| `*`      | `user:delete` | ✅ 全局通配符 |
-| `*`      | `order:list`  | ✅ 全局通配符 |
-| `*`      | `admin:config`| ✅ 全局通配符 |
-
-### 算法流程
-
-```mermaid
-graph TD
-    A[开始：检查权限] --> B[获取用户的权限列表]
-    B --> C{步骤 1：精确匹配<br/>列表中是否包含<br/>精确权限？}
-    C -->|是| D[✅ 通过]
-    C -->|否| E{步骤 2：通配符匹配<br/>检查每个权限<br/>是否以 ':*' 结尾？<br/>需要的权限是否以前缀开头？}
-    E -->|是| F[✅ 通过]
-    E -->|否| G[❌ 拒绝]
-    
-    style D fill:#90EE90,stroke:#333,stroke-width:2px
-    style F fill:#90EE90,stroke:#333,stroke-width:2px
-    style G fill:#FFB6C6,stroke:#333,stroke-width:2px
-    style C fill:#87CEEB,stroke:#333,stroke-width:2px
-    style E fill:#87CEEB,stroke:#333,stroke-width:2px
-```
-
-### 实现代码
-
-匹配逻辑在 `sa-token-core/src/util.rs` 中实现：
-
-```rust
-pub async fn has_permission(login_id: impl LoginId, permission: &str) -> bool {
-    let manager = Self::get_manager();
-    let map = manager.user_permissions.read().await;
-    
-    if let Some(permissions) = map.get(&login_id.to_login_id()) {
-        // 1. 精确匹配
-        if permissions.contains(&permission.to_string()) {
-            return true;
-        }
-        
-        // 2. 通配符匹配
-        for perm in permissions {
-            if perm.ends_with(":*") {
-                let prefix = &perm[..perm.len() - 2];
-                if permission.starts_with(prefix) {
-                    return true;
-                }
-            }
-        }
-    }
-    
-    false
+#[sa_check_login]
+async fn user_profile() -> Result<impl Responder, StatusCode> {
+    // login_id 保证可通过 StpUtil::get_login_id_as_string() 获取
+    Ok("个人资料页")
 }
 ```
 
-### 使用示例
-
-#### 示例 1：精确权限
-
+**展开为：**
 ```rust
-use sa_token_core::StpUtil;
-use sa_token_macro::sa_check_permission;
-
-// 初始化权限
-StpUtil::set_permissions("user_123", vec![
-    "user:list".to_string(),
-    "user:create".to_string(),
-]).await?;
-
-// 检查精确权限
-#[sa_check_permission("user:list")]
-async fn list_users() -> &'static str {
-    let login_id = StpUtil::get_login_id_as_string()?;
-    
-    // 手动检查（推荐）
-    if !StpUtil::has_permission(&login_id, "user:list").await {
-        return "权限不足";
-    }
-    
-    "用户列表"
+async fn user_profile() -> Result<impl Responder, StatusCode> {
+    sa_token_core::StpUtil::check_login_current()?;
+    Ok("个人资料页")
 }
 ```
-
-#### 示例 2：通配符权限
-
-```rust
-// 管理员拥有所有用户模块权限
-StpUtil::set_permissions("admin_001", vec![
-    "user:*".to_string(),    // 所有用户操作
-    "order:*".to_string(),   // 所有订单操作
-]).await?;
-
-// admin_001 可以访问以下所有接口
-#[sa_check_permission("user:list")]
-async fn list_users() { /* ... */ }
-
-#[sa_check_permission("user:create")]
-async fn create_user() { /* ... */ }
-
-#[sa_check_permission("user:delete")]
-async fn delete_user() { /* ... */ }
-```
-
-#### 示例 3：多个权限
-
-```rust
-// 检查多个权限（AND 逻辑）
-if StpUtil::has_permissions_and(&login_id, &["user:read", "user:write"]).await {
-    println!("同时拥有读写权限");
-}
-
-// 检查多个权限（OR 逻辑）
-if StpUtil::has_permissions_or(&login_id, &["admin:*", "user:*"]).await {
-    println!("拥有管理员或用户模块权限");
-}
-```
-
-#### 示例 4：动态权限
-
-```rust
-#[sa_check_permission("order:refund")]
-async fn refund_order(order_id: u64, amount: f64) -> Result<String, StatusCode> {
-    let login_id = StpUtil::get_login_id_as_string()?;
-    
-    // 根据业务逻辑动态决定权限
-    let required_permission = if amount > 1000.0 {
-        "order:refund:advanced"  // 大额退款需要高级权限
-    } else {
-        "order:refund"
-    };
-    
-    if !StpUtil::has_permission(&login_id, required_permission).await {
-        return Err(StatusCode::FORBIDDEN);
-    }
-    
-    Ok(format!("已退款 ¥{}", amount))
-}
-```
-
-### 最佳实践
-
-#### 1. 权限命名规范
-
-遵循 `模块:操作` 格式：
-
-```
-✅ 正确：
-- user:list
-- user:create
-- user:update
-- user:delete
-- order:create
-- order:refund
-- admin:config
-
-❌ 错误：
-- userList（没有分隔符）
-- user_create（错误的分隔符）
-- deleteUser（操作在前）
-```
-
-#### 2. 通配符使用
-
-谨慎使用通配符，仅用于管理员角色：
-
-```rust
-// 普通用户 - 具体权限
-StpUtil::set_permissions("user_123", vec![
-    "user:list".to_string(),
-    "user:view".to_string(),
-]).await?;
-
-// 管理员 - 模块通配符
-StpUtil::set_permissions("admin_001", vec![
-    "user:*".to_string(),
-    "order:*".to_string(),
-]).await?;
-
-// 超级管理员 - 全局通配符（谨慎使用）
-StpUtil::set_permissions("superadmin_001", vec![
-    "*".to_string(),
-]).await?;
-```
-
-#### 3. 分层权限
-
-按层次组织权限：
-
-```rust
-// 层级 1：模块
-"user:*"      // 所有用户操作
-
-// 层级 2：操作
-"user:list"
-"user:create"
-"user:update"
-"user:delete"
-
-// 层级 3：资源特定（自定义实现）
-"user:update:self"     // 只能更新自己的资料
-"user:update:any"      // 可以更新任何用户
-```
-
-### 性能考虑
-
-- **精确匹配优先：** 系统先检查精确匹配，优化最常见的情况
-- **内存存储：** 权限存储在内存（`HashMap`）中以实现快速访问
-- **异步操作：** 所有权限检查都是异步的，支持 Redis 或数据库后端
-
-### 安全注意事项
-
-⚠️ **重要：**
-1. **需要手动检查：** `#[sa_check_permission]` 宏只添加元数据，必须在函数中手动调用 `StpUtil::has_permission()`
-2. **使用前验证：** 在执行敏感操作前始终检查权限
-3. **限制通配符：** 仅对超级管理员账户使用全局通配符 (`*`)
-4. **审计跟踪：** 考虑记录权限检查日志以进行安全审计
 
 ---
 
+### `#[sa_check_permission("权限")]`
 
-## Related Documentation
+检查用户是否拥有精确权限。支持通配符（见[权限匹配规则](#权限匹配规则)）。
 
-- [StpUtil API](/zh/guide/stp-util.md) - Complete StpUtil API reference
-- [README](https://github.com/sa-tokens/sa-token-rust) - Project overview and quick start
+```rust
+use sa_token_macro::sa_check_permission;
+
+#[sa_check_permission("user:delete")]
+async fn delete_user() -> Result<impl Responder, StatusCode> {
+    Ok("用户已删除")
+}
+
+#[sa_check_permission("admin:*")]
+async fn admin_dashboard() -> Result<impl Responder, StatusCode> {
+    Ok("管理后台")
+}
+```
+
+**展开为：**
+```rust
+async fn delete_user() -> Result<impl Responder, StatusCode> {
+    let __login_id = sa_token_core::StpUtil::get_login_id_as_string().await?;
+    sa_token_core::StpUtil::check_permission(&__login_id, "user:delete").await?;
+    Ok("用户已删除")
+}
+```
+
+---
+
+### `#[sa_check_permissions_and("a", "b", ...)]`
+
+用户必须拥有全部指定权限。
+
+```rust
+#[sa_check_permissions_and("user:read", "user:write")]
+async fn manage_users() -> Result<impl Responder, StatusCode> {
+    Ok("用户管理")
+}
+```
+
+**展开为单次 `has_permissions_and` 调用，失败返回 `PermissionDeniedDetail`。**
+
+---
+
+### `#[sa_check_permissions_or("a", "b", ...)]`
+
+用户只需拥有任一指定权限。
+
+```rust
+#[sa_check_permissions_or("admin:panel", "super:admin")]
+async fn admin_or_super() -> Result<impl Responder, StatusCode> {
+    Ok("管理面板")
+}
+```
+
+**展开为单次 `has_permissions_or` 调用，失败返回 `PermissionDeniedDetail`。**
+
+---
+
+### `#[sa_check_role("角色")]`
+
+检查用户是否拥有精确角色。
+
+```rust
+use sa_token_macro::sa_check_role;
+
+#[sa_check_role("admin")]
+async fn admin_panel() -> Result<impl Responder, StatusCode> {
+    Ok("管理面板")
+}
+```
+
+**展开为：**
+```rust
+async fn admin_panel() -> Result<impl Responder, StatusCode> {
+    let __login_id = sa_token_core::StpUtil::get_login_id_as_string().await?;
+    sa_token_core::StpUtil::check_role(&__login_id, "admin").await?;
+    Ok("管理面板")
+}
+```
+
+---
+
+### `#[sa_check_roles_and("a", "b", ...)]`
+
+用户必须拥有全部指定角色。逐个检查，首个失败即短路。
+
+```rust
+#[sa_check_roles_and("admin", "super")]
+async fn super_admin_panel() -> Result<impl Responder, StatusCode> {
+    Ok("超级管理员面板")
+}
+```
+
+**首个缺失角色返回 `RoleDenied`。**
+
+---
+
+### `#[sa_check_roles_or("a", "b", ...)]`
+
+用户只需拥有任一指定角色。
+
+```rust
+#[sa_check_roles_or("admin", "moderator")]
+async fn moderate_content() -> Result<impl Responder, StatusCode> {
+    Ok("内容审核")
+}
+```
+
+**全部不匹配时返回 `RoleDenied`。**
+
+---
+
+### `#[sa_ignore]`
+
+跳过所有 sa-token 认证检查。优先级最高 — 覆盖同一项上的任何其他 `#[sa_check_*]` 宏。
+
+**可应用于：**
+- 函数：单个路由跳过认证
+- 结构体：控制器所有方法跳过认证
+- impl 块：impl 块中所有方法跳过认证
+
+```rust
+use sa_token_macro::sa_ignore;
+
+// 公开接口跳过认证
+#[sa_ignore]
+async fn health_check() -> &'static str {
+    "OK"
+}
+
+// 整个控制器跳过认证
+#[sa_ignore]
+struct PublicController;
+
+impl PublicController {
+    async fn home() -> &'static str { "首页" }
+    async fn about() -> &'static str { "关于" }
+}
+```
+
+---
+
+## 权限匹配规则
+
+### 匹配算法
+
+1. **精确匹配** — `user:delete` 匹配 `user:delete`
+2. **前缀通配** — 以 `:*` 结尾的权限匹配该前缀下所有子项
+3. **全局通配** — `*` 匹配一切
+
+### 通配符示例
+
+| 用户权限 | 需求权限 | 结果 |
+|---|---|---|
+| `user:*` | `user:delete` | ✅ |
+| `user:*` | `user:list` | ✅ |
+| `user:*` | `admin:list` | ❌ 不同前缀 |
+| `*` | `anything:here` | ✅ |
+
+### 实现细节
+
+通配符匹配检测权限是否以 `:*` 结尾，然后验证需求权限是否以对应前缀开头。例如：`user:*` → 前缀为 `user:`，需求 `user:delete` 以 `user:` 开头 → 匹配。
+
+**注意：** 仅支持尾部 `:*` 通配。`admin:*:*` 等模式不支持 — 直接用 `admin:*` 即可匹配 `admin:user:delete`。
+
+---
+
+## 角色匹配规则
+
+角色匹配是**精确匹配**，不支持通配符。
+
+| 用户角色 | 需求角色 | 结果 |
+|---|---|---|
+| `["admin"]` | `admin` | ✅ |
+| `["user", "vip"]` | `admin` | ❌ |
+| `["superadmin"]` | `admin` | ❌ 字符串不同 |
+
+---
+
+## 最佳实践
+
+1. **宏与中间件配套使用** — 始终在路由中注册 `SaTokenLayer`（或等价物）
+2. **公开路由用 `#[sa_ignore]`** — 登录页、健康检查、静态资源
+3. **权限命名用 `模块:操作` 格式** — `user:list`、`user:create`、`order:refund`
+4. **全局通配符仅给超级管理员** — `*` 权限范围过大
+5. **错误类型实现 `From<SaTokenError>`** — 确保处理器能正确传播认证错误
 
 ## 相关文档
 
-- [StpUtil API](/zh/guide/stp-util.md) - 完整的 StpUtil API 参考
-- [首页](/zh/) - 项目概述和快速开始
-
+- [StpUtil API](/zh/guide/stp-util)
+- [框架集成](/zh/guide/framework-integration)

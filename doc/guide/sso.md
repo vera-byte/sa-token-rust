@@ -38,6 +38,37 @@ Each application acts as an SSO Client that:
 - Creates local sessions
 - Handles logout callbacks
 
+#### 3. SsoManager - Unified Manager
+
+`SsoManager` wraps `SsoServer` and `SsoClient` into a single builder-based interface:
+
+```rust
+use sa_token_core::{SsoManager, SsoConfig};
+
+let sso = SsoManager::builder()
+    .server("https://sso.example.com/auth")
+    .client("https://app1.example.com")
+    .ticket_timeout(300)
+    .build();
+
+// Access server-side methods
+let ticket = sso.server.login("user_123", "https://app1.example.com").await?;
+
+// Access client-side methods
+let login_url = sso.client.get_login_url();
+```
+
+#### 4. SsoConfig - Configuration
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `server_url` | `String` | — | SSO authentication server URL |
+| `service_url` | `String` | — | Current service (client) URL |
+| `ticket_timeout` | `i64` | `300` | Ticket validity in seconds |
+| `allowed_origins` | `Vec<String>` | `[]` | CORS allowed origins for cross-domain |
+
+#### 5. SsoTicket - Authentication Ticket
+
 #### 3. SsoTicket - Authentication Ticket
 
 A ticket is a short-lived, one-time use authentication token that contains:

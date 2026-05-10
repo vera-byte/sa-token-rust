@@ -4,8 +4,7 @@ const enSidebar = [
   {
     text: '🚀 Quick Start',
     items: [
-      { text: 'Project Introduction', link: '/guide/project-intro' },
-      { text: 'Home', link: '/' },
+            { text: 'Home', link: '/' },
       { text: 'Quick Start Guide', link: '/guide/quick-start' },
     ]
   },
@@ -13,7 +12,7 @@ const enSidebar = [
     text: '📖 Basics',
     items: [
       { text: 'StpUtil API Reference', link: '/guide/stp-util' },
-      { text: 'Permission Matching', link: '/guide/permission-matching' },
+      { text: 'Proc Macros', link: '/guide/permission-matching' },
       { text: 'Event Listeners', link: '/guide/event-listener' },
       { text: 'Path Auth Guide', link: '/guide/path-auth' },
       { text: 'Token Styles', link: '/guide/token-styles' },
@@ -35,6 +34,8 @@ const enSidebar = [
   {
     text: 'Reference',
     items: [
+      { text: 'Storage Backends', link: '/guide/storage' },
+      { text: 'Adapters', link: '/guide/adapter' },
       { text: 'Error Reference', link: '/reference/error-reference' },
     ]
   },
@@ -44,7 +45,6 @@ const zhSidebar = [
   {
     text: '🚀 快速入门',
     items: [
-      { text: '项目介绍', link: '/zh/guide/project-intro' },
       { text: '首页', link: '/zh/' },
       { text: '快速入门指南', link: '/zh/guide/quick-start' },
     ]
@@ -53,7 +53,7 @@ const zhSidebar = [
     text: '📖 基础',
     items: [
       { text: 'StpUtil API 参考', link: '/zh/guide/stp-util' },
-      { text: '权限匹配规则', link: '/zh/guide/permission-matching' },
+      { text: '过程宏', link: '/zh/guide/permission-matching' },
       { text: '事件监听器', link: '/zh/guide/event-listener' },
       { text: '路径鉴权指南', link: '/zh/guide/path-auth' },
       { text: 'Token 风格', link: '/zh/guide/token-styles' },
@@ -75,6 +75,8 @@ const zhSidebar = [
   {
     text: '参考',
     items: [
+      { text: '存储后端', link: '/zh/guide/storage' },
+      { text: '适配器', link: '/zh/guide/adapter' },
       { text: '错误参考', link: '/zh/reference/error-reference' },
     ]
   },
