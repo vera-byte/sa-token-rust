@@ -10,7 +10,7 @@ use crate::config::{TokenStyle, SaTokenConfig};
 use crate::token::TokenValue;
 use crate::token::jwt::{JwtManager, JwtClaims, JwtAlgorithm};
 use chrono::Utc;
-use sha2::{Sha256, Digest};
+use sha2::{Sha256, Sha512, Digest};
 
 pub struct TokenGenerator;
 
@@ -74,10 +74,9 @@ impl TokenGenerator {
     
     /// 生成随机字符串
     pub fn generate_random(length: usize) -> TokenValue {
-        use sha2::{Sha256, Digest};
         let uuid = Uuid::new_v4();
         let random_bytes = uuid.as_bytes();
-        let hash = Sha256::digest(random_bytes);
+        let hash = Sha512::digest(random_bytes);
         let hex_string = hex::encode(hash);
         TokenValue::new(hex_string[..length.min(hex_string.len())].to_string())
     }
@@ -401,5 +400,39 @@ mod tests {
         assert!(!token.as_str().is_empty());
         // UUID 格式不包含 '.'
         assert!(!token.as_str().contains('.'));
+    }
+
+
+    #[test]
+    fn test_random_32_length() {
+        let config = SaTokenConfig {
+            token_style: TokenStyle::Random32,
+            ..SaTokenConfig::default()
+        };
+        let token = TokenGenerator::generate_with_login_id(&config, "user_random");
+        assert!(!token.as_str().is_empty());
+        assert_eq!(token.as_str().len(), 32);
+    }
+
+    #[test]
+    fn test_random_64_length() {
+        let config = SaTokenConfig {
+            token_style: TokenStyle::Random64,
+            ..SaTokenConfig::default()
+        };
+        let token = TokenGenerator::generate_with_login_id(&config, "user_random");
+        assert!(!token.as_str().is_empty());
+        assert_eq!(token.as_str().len(), 64);
+    }
+    
+    #[test]
+    fn test_random_128_length() {
+        let config = SaTokenConfig {
+            token_style: TokenStyle::Random128,
+            ..SaTokenConfig::default()
+        };
+        let token = TokenGenerator::generate_with_login_id(&config, "user_random");
+        assert!(!token.as_str().is_empty());
+        assert_eq!(token.as_str().len(), 128);
     }
 }
