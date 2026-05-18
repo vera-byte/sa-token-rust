@@ -81,6 +81,7 @@ members = [
     "sa-token-plugin-ntex",
     "sa-token-plugin-ntex-core",
     "sa-token-plugin-ntex-v212",
+    "sa-token-plugin-tonic",
 ]
 
 # Examples are excluded from default workspace build to reduce warnings
@@ -174,3 +175,4 @@ sa-token-plugin-salvo-core = { path = "sa-token-plugin-salvo-core" }
 sa-token-plugin-salvo-v079 = { path = "sa-token-plugin-salvo-v079" }
 sa-token-plugin-tide = { path = "sa-token-plugin-tide" }
 sa-token-plugin-warp = { path = "sa-token-plugin-warp" }
+sa-token-plugin-tonic = { path = "sa-token-plugin-tonic" }
