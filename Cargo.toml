@@ -81,6 +81,8 @@ members = [
     "sa-token-plugin-ntex",
     "sa-token-plugin-ntex-core",
     "sa-token-plugin-ntex-v212",
+    "sa-token-plugin-tonic",
+    "examples/tonic-full-example",
 ]
 
 # Examples are excluded from default workspace build to reduce warnings
@@ -88,10 +90,12 @@ members = [
 #   cargo build -p axum-full-example
 #   cargo build -p poem-full-example
 #   cargo build -p actix-web-example
+#   cargo build -p tonic-full-example
 exclude = [
     "examples/axum-full-example",
     "examples/poem-full-example",
     "examples/actix-web-example",
+    "examples/tonic-full-example",
 ]
 
 resolver = "2"
@@ -174,3 +178,4 @@ sa-token-plugin-salvo-core = { path = "sa-token-plugin-salvo-core" }
 sa-token-plugin-salvo-v079 = { path = "sa-token-plugin-salvo-v079" }
 sa-token-plugin-tide = { path = "sa-token-plugin-tide" }
 sa-token-plugin-warp = { path = "sa-token-plugin-warp" }
+sa-token-plugin-tonic = { path = "sa-token-plugin-tonic" }

@@ -1,0 +1,82 @@
+// 中文 | English
+// Proto 定义文件 | Proto definition file
+// sa-token-tonic gRPC 示例服务
+
+syntax = "proto3";
+
+package auth;
+
+// 登录请求 | Login request
+message LoginRequest {
+    string username = 1;
+    string password = 2;
+}
+
+// 登录响应 | Login response
+message LoginResponse {
+    string token = 1;
+    string user_id = 2;
+    repeated string permissions = 3;
+    repeated string roles = 4;
+}
+
+// 用户信息请求 | User info request
+message UserInfoRequest {
+    // 空消息，用于需要认证的请求
+    // Empty message for authenticated requests
+}
+
+// 用户信息响应 | User info response
+message UserInfoResponse {
+    string user_id = 1;
+    repeated string permissions = 2;
+    repeated string roles = 3;
+}
+
+// 权限列表请求 | Permissions list request
+message PermissionsListRequest {
+    // 空消息 | Empty message
+}
+
+// 权限列表响应 | Permissions list response
+message PermissionsListResponse {
+    repeated string permissions = 1;
+}
+
+// 角色列表请求 | Roles list request
+message RolesListRequest {
+    // 空消息 | Empty message
+}
+
+// 角色列表响应 | Roles list response
+message RolesListResponse {
+    repeated string roles = 1;
+}
+
+// 健康检查请求 | Health check request
+message HealthCheckRequest {
+    // 空消息 | Empty message
+}
+
+// 健康检查响应 | Health check response
+message HealthCheckResponse {
+    string status = 1;
+}
+
+// gRPC 认证服务 | gRPC Authentication Service
+service AuthService {
+    // 健康检查（公开） | Health check (public)
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+
+    // 登录（公开） | Login (public)
+    rpc Login(LoginRequest) returns (LoginResponse);
+
+    // 获取用户信息（需要登录） | Get user info (requires login)
+    rpc GetUserInfo(UserInfoRequest) returns (UserInfoResponse);
+
+    // 获取权限列表（需要登录） | Get permissions list (requires login)
+    rpc GetPermissions(PermissionsListRequest) returns (PermissionsListResponse);
+
+    // 获取角色列表（需要登录） | Get roles list (requires login)
+    rpc GetRoles(RolesListRequest) returns (RolesListResponse);
+}
