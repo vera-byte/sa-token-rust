@@ -1,6 +1,7 @@
 // Author: 金书记
 //
-//! Tonic gRPC request/response adapters.
+// 中文 | English
+// Tonic gRPC 请求/响应适配器 | Tonic gRPC request/response adapters
 
 use http::HeaderMap;
 use sa_token_adapter::{SaRequest, SaResponse, CookieOptions};
@@ -8,7 +9,8 @@ use sa_token_adapter::utils::parse_cookies;
 use serde::Serialize;
 use std::collections::HashMap;
 
-/// gRPC request adapter that wraps tonic metadata.
+/// 中文: gRPC 请求适配器，用于包装 tonic metadata
+/// English: gRPC request adapter that wraps tonic metadata
 pub struct TonicRequestAdapter {
     headers: HashMap<String, String>,
     method: String,
@@ -16,7 +18,8 @@ pub struct TonicRequestAdapter {
 }
 
 impl TonicRequestAdapter {
-    /// Create a new request adapter.
+    /// 中文: 从 headers、method 和 path 创建请求适配器
+    /// English: Create a new request adapter from headers, method and path
     pub fn new(headers: HashMap<String, String>, method: String, path: String) -> Self {
         Self {
             headers,
@@ -25,7 +28,8 @@ impl TonicRequestAdapter {
         }
     }
 
-    /// Create from tonic metadata map.
+    /// 中文: 从 tonic metadata map 创建请求适配器
+    /// English: Create from tonic metadata map
     pub fn from_metadata(
         metadata: &tonic::metadata::MetadataMap,
         method: String,
@@ -35,11 +39,13 @@ impl TonicRequestAdapter {
         for item in metadata.iter() {
             match item {
                 tonic::metadata::KeyAndValueRef::Ascii(key, value) => {
-                    // Ascii values can be converted to str
+                    // 中文: Ascii 值可以转换为字符串
+                    // English: Ascii values can be converted to str
                     headers.insert(key.to_string(), format!("{:?}", value));
                 }
                 tonic::metadata::KeyAndValueRef::Binary(key, value) => {
-                    // Binary values are base64 encoded in Debug format
+                    // 中文: Binary 值在 Debug 格式中为 base64 编码
+                    // English: Binary values are base64 encoded in Debug format
                     headers.insert(key.to_string(), format!("{:?}", value));
                 }
             }
@@ -51,7 +57,8 @@ impl TonicRequestAdapter {
         }
     }
 
-    /// Create from http HeaderMap.
+    /// 中文: 从 http HeaderMap 创建请求适配器
+    /// English: Create from http HeaderMap
     pub fn from_header_map(headers: &HeaderMap, method: String, path: String) -> Self {
         let mut map = HashMap::new();
         for (key, value) in headers.iter() {
@@ -66,12 +73,14 @@ impl TonicRequestAdapter {
         }
     }
 
-    /// Get all headers.
+    /// 中文: 获取所有请求头
+    /// English: Get all headers
     pub fn headers(&self) -> &HashMap<String, String> {
         &self.headers
     }
 
-    /// Get header by name.
+    /// 中文: 根据名称获取请求头
+    /// English: Get header by name
     pub fn get(&self, name: &str) -> Option<&String> {
         self.headers.get(name)
     }
@@ -100,7 +109,8 @@ impl SaRequest for TonicRequestAdapter {
     }
 }
 
-/// Response wrapper for gRPC responses.
+/// 中文: gRPC 响应适配器
+/// English: Response wrapper for gRPC responses
 pub struct TonicResponseAdapter {
     status: u16,
     headers: Vec<(String, String)>,
@@ -108,7 +118,8 @@ pub struct TonicResponseAdapter {
 }
 
 impl TonicResponseAdapter {
-    /// Create a new response adapter.
+    /// 中文: 创建新的响应适配器
+    /// English: Create a new response adapter
     pub fn new() -> Self {
         Self {
             status: 200,
@@ -117,17 +128,20 @@ impl TonicResponseAdapter {
         }
     }
 
-    /// Get the response status.
+    /// 中文: 获取响应状态码
+    /// English: Get the response status
     pub fn status(&self) -> u16 {
         self.status
     }
 
-    /// Get all headers.
+    /// 中文: 获取所有响应头
+    /// English: Get all headers
     pub fn headers(&self) -> &[(String, String)] {
         &self.headers
     }
 
-    /// Get the response body.
+    /// 中文: 获取响应体
+    /// English: Get the response body
     pub fn body(&self) -> Option<&str> {
         self.body.as_deref()
     }
