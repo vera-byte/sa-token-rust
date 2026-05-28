@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use sa_token_adapter::storage::SaStorage;
-use sa_token_core::{SaTokenConfig, SaTokenManager, StpUtil};
+use sa_token_core::{SaTokenConfig, SaTokenListener, SaTokenManager, StpUtil};
 
 /// 中文: Tonic gRPC 应用状态（框架无关）
 /// English: Tonic gRPC application state (framework-agnostic)
@@ -117,6 +117,24 @@ impl SaTokenStateBuilder {
     /// English: Set storage implementation
     pub fn storage(mut self, storage: Arc<dyn SaStorage>) -> Self {
         self.config_builder = self.config_builder.storage(storage);
+        self
+    }
+
+    /// 中文: 注册事件监听器
+    /// English: Register an event listener
+    ///
+    /// # 示例 | Example
+    ///
+    /// ```ignore
+    /// use sa_token_core::LoggingListener;
+    ///
+    /// let state = SaTokenState::builder()
+    ///     .storage(Arc::new(MemoryStorage::new()))
+    ///     .register_listener(Arc::new(LoggingListener))
+    ///     .build();
+    /// ```
+    pub fn register_listener(mut self, listener: Arc<dyn SaTokenListener>) -> Self {
+        self.config_builder = self.config_builder.register_listener(listener);
         self
     }
 

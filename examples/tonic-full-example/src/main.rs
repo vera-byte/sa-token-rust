@@ -252,6 +252,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sa_token_state = SaTokenState::builder()
         .storage(Arc::new(sa_token_plugin_tonic::MemoryStorage::new()))
         .token_name("satoken")
+        .register_listener(Arc::new(LoggingListener))
         .timeout(86400) // 中文: 24小时 | English: 24 hours
         .build();
 
@@ -268,7 +269,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 中文: 4. 创建 gRPC 服务
     // English: 4. Create gRPC service
-    let service = auth::auth_service_server::AuthServiceServer::with_interceptor(
+    let service: tonic::service::interceptor::InterceptedService<
+        auth::auth_service_server::AuthServiceServer<AuthServiceImpl>,
+        GrpcServerInterceptor,
+    > = auth::auth_service_server::AuthServiceServer::with_interceptor(
         AuthServiceImpl::new(sa_token_state.clone()),
         auth_interceptor,
     );
